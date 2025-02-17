@@ -1,0 +1,12 @@
+[Unit]
+Description=PicoFox WWW Service
+After=network.target 
+
+[Service]
+ExecStart=/usr/local/sbin/PICOFoxweb 8080
+KillMode=process
+User=picofoxweb
+Group=picofoxweb
+
+[Install]
+WantedBy=multi-user.target

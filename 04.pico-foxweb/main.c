@@ -4,7 +4,7 @@
 #define CHUNK_SIZE 1024 // read 1024 bytes at a time
 
 // Public directory settings
-#define PUBLIC_DIR "./webroot"
+#define PUBLIC_DIR "/var/www/picofoxweb/webroot"
 #define INDEX_HTML "/index.html"
 #define NOT_FOUND_HTML "/404.html"
 
