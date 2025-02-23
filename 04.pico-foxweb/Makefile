@@ -20,9 +20,12 @@ install: PICOFoxweb
 	systemctl daemon-reload
 	systemctl restart picofoxweb.service
 	mkdir -p /var/www/picofoxweb
+	touch /var/log/foxweb.log
 	cp -r webroot -t /var/www/picofoxweb/
 	chown -R picofoxweb:picofoxweb /var/www/picofoxweb
+	chown -R picofoxweb:picofoxweb /var/log
 	chmod -R 755 /var/www/picofoxweb/webroot
+	
 
 uninstall:
 	systemctl stop picofoxweb

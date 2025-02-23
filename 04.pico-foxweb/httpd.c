@@ -9,8 +9,11 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
+#include <syslog.h>
+#include <time.h>
 #include <unistd.h>
 
+#define PUBLIC_DIR "/var/www/picofoxweb/webroot"
 #define MAX_CONNECTIONS 1000
 #define BUF_SIZE 65535
 #define QUEUE_SIZE 1000000
@@ -18,7 +21,7 @@
 static int listenfd;
 int *clients;
 static void start_server(const char *);
-static void respond(int);
+static void respond(int, char*);
 
 static char *buf;
 
@@ -50,12 +53,18 @@ void serve_forever(const char *PORT) {
     clients[i] = -1;
   start_server(PORT);
 
+  // //Журнализация в системный журнал сообщений о запуске службы  с указанием, прослушиваемого порта и рабочего каталога с ресурсами.
+  char log[1000];
+  sprintf(log, "%s%s%s%s", "Server started running using port:", PORT, ", resource catalog:", PUBLIC_DIR);
+  syslog(LOG_INFO, log);
+
   // Ignore SIGCHLD to avoid zombie threads
   signal(SIGCHLD, SIG_IGN);
 
   // ACCEPT connections
   while (1) {
     addrlen = sizeof(clientaddr);
+    char *ip = inet_ntoa(clientaddr.sin_addr);
     clients[slot] = accept(listenfd, (struct sockaddr *)&clientaddr, &addrlen);
 
     if (clients[slot] < 0) {
@@ -64,7 +73,7 @@ void serve_forever(const char *PORT) {
     } else {
       if (fork() == 0) {
         close(listenfd);
-        respond(slot);
+        respond(slot, ip);
         close(clients[slot]);
         clients[slot] = -1;
         exit(0);
@@ -158,7 +167,7 @@ static void uri_unescape(char *uri) {
 }
 
 // client connection
-void respond(int slot) {
+void respond(int slot, char* ip) {
   int rcvd;
 
   buf = malloc(BUF_SIZE);
@@ -176,9 +185,17 @@ void respond(int slot) {
     uri = strtok(NULL, " \t");
     prot = strtok(NULL, " \t\r\n");
 
+    //save DateTime
+    time_t rawTime;
+    struct tm * timeInfo;
+    char date[30];
+    time(&rawTime);
+    timeInfo = localtime(&rawTime);
+    strftime(date, 30, "%d/%b/%Y:%H:%M:%S %z", timeInfo);
+
     uri_unescape(uri);
 
-    fprintf(stderr, "\x1b[32m + [%s] %s\x1b[0m\n", method, uri);
+    //fprintf(stderr, "\x1b[32m + [%s] %s\x1b[0m\n", method, uri);
 
     qs = strchr(uri, '?');
 
@@ -203,7 +220,7 @@ void respond(int slot) {
       h->name = key;
       h->value = val;
       h++;
-      fprintf(stderr, "[H] %s: %s\n", key, val);
+     // fprintf(stderr, "[H] %s: %s\n", key, val);
       t = val + 1 + strlen(val);
       if (t[1] == '\r' && t[2] == '\n')
         break;
@@ -219,7 +236,7 @@ void respond(int slot) {
     close(clientfd);
 
     // call router
-    route();
+    route(date, method, ip, prot);
 
     // tidy up
     fflush(stdout);
