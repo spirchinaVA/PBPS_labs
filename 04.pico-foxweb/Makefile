@@ -5,7 +5,7 @@ clean:
 	@rm -rf PICOFoxweb
 
 PICOFoxweb: main.o httpd.o
-	gcc -o PICOFoxweb $^
+	gcc -o PICOFoxweb $^ -lcrypto -lhiredis
 
 main.o: main.c httpd.h
 	gcc -c -o main.o main.c
